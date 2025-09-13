@@ -1,0 +1,41 @@
+ please try to stick to the plan
+okay there is a project named **Sahay**, which is a gamified learning platform we want to make for the hackathon. the project is about:  
+  * a website where NCERT books are fed in.  
+  * a student can select the class and the respective book and chapter, then he/she can start learning.
+  **main features:**  
+  * when a student selects a chapter, a part of the chapter is shown. the student is told to complete this part, then after reading they hit the **complete** button.  
+  * after clicking complete, an assessment window opens with some MCQs or similar questions. if most of the answers are correct, then the next part of the text is unlocked.  
+  * if most of the answers are wrong, then the student will be shown the same part again, but in a simplified version with examples.  
+  * if the student completes a part, he/she gets a badge and the performance is recorded.  
+  * if the student has a doubt in a part of the text, they can select the text. once selected, a chat window appears where the student can ask things like *"can you explain me in hinglish?"* or *"can you give me an example?"*  
+  * students can also solve numericals. if they get stuck, they can select the question and ask the chat like *"can you explain step by step?"* or *"can you generate another similar problem so I can practice?"*  
+  * when selecting a text or question, there should be suggested/pre-loaded prompts for common questions students usually ask.  
+  * students can also chat with images. they can select an image from the book and ask about it to understand more.  
+  **Tech stack we are using:**  
+
+  * LangChain  
+
+  * ChromaDB  
+
+  * Streamlit  
+  * LLM APIs ( Gemini API)  
+
+  **The workflow:**  
+
+  * the books will be stored in ChromaDB.  
+
+  * LangChain will handle communication between the vector database and the LLM API.  
+
+  * when the user chats in the Streamlit chatbox, or when text has to be simplified, LangChain should interact with everything efficiently.  
+
+for simplicity we can do for now only for class 12th physics chapter 1 and class 12th chemistry chapter 1
+ working:
+
+when student select the class and subject then chapter then the text will get extracted from the chromaDB of the chapter the student selected.
+
+then when student is reading, then after reading the first part then, he/she can click on take assesment button then the what will happen is , the first part from chromaDB, will go to the gemini model with the prompt like, make three to four questions and with 4 respective options of them with their answer in a specific format
+
+then what ever the reply from gemini it will be converted into 4 quiz question that user will give, then after validating the answers, then the score will be provided to the user and performance will be recorded , if the user get 75% in the quiz then a badge pop up will show then the next part will be opened.
+
+also there will be another feature that, when a user select some text then a text box will appear then user can ask any query, then the selected text content will be retrieved from chromaDB then it will go the gemini model with the query asked from the user then whatever is the reply from gemini it will be reflected in the reply of chatbox
+
