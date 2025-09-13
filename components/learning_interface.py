@@ -66,7 +66,17 @@ class LearningInterface:
             placeholder="Copy and paste any part of the text above that you want to ask about..."
         )
         
-        if selected_text:
+        # Check for text input and trigger rerun if needed
+        if selected_text and selected_text.strip():
+            # Store selected text in session state for consistency
+            if st.session_state.get("last_selected_text") != selected_text:
+                st.session_state["last_selected_text"] = selected_text
+                st.rerun()
+        
+        # Use session state text to ensure consistency
+        display_text = st.session_state.get("last_selected_text", selected_text)
+        
+        if display_text and display_text.strip():
             # Suggested prompts
             st.subheader("Suggested Questions:")
             suggested_prompts = self.orchestrator.get_suggested_prompts()
@@ -78,13 +88,13 @@ class LearningInterface:
                         with st.spinner("Getting answer..."):
                             answer = self.orchestrator.handle_student_query(
                                 st.session_state.current_subject,
-                                selected_text,
+                                display_text,
                                 prompt
                             )
                         
                         # Add to chat history
                         chat_entry = {
-                            'selected_text': selected_text,
+                            'selected_text': display_text,
                             'question': prompt,
                             'answer': answer
                         }
@@ -101,13 +111,13 @@ class LearningInterface:
                 with st.spinner("Getting answer..."):
                     answer = self.orchestrator.handle_student_query(
                         st.session_state.current_subject,
-                        selected_text,
+                        display_text,
                         custom_question
                     )
                 
                 # Add to chat history
                 chat_entry = {
-                    'selected_text': selected_text,
+                    'selected_text': display_text,
                     'question': custom_question,
                     'answer': answer
                 }
