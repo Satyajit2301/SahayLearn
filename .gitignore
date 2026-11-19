@@ -1,0 +1,25 @@
+# Environment variables & secrets (NEVER commit these)
+.env
+.env.local
+*.env
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# Replit & local temporary files
+.local/
+.replit
+repl_state.bin
+rapid_build_started
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

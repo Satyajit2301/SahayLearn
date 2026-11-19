@@ -1,5 +1,9 @@
 import streamlit as st
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from utils.pdf_processor import PDFProcessor
 from utils.chromadb_manager import ChromaDBManager
 from components.learning_interface import LearningInterface

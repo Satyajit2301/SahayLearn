@@ -39,23 +39,29 @@ class LangChainOrchestrator:
         """Handle student chat queries with context from ChromaDB"""
         collection_name = f"{subject.lower()}_chapter1"
         
-        # Find relevant content in ChromaDB
-        relevant_content = self.chromadb_manager.get_content_by_text_selection(
-            collection_name, selected_text
+        actual_query = query.strip() if (query and query.strip()) else (selected_text.strip() if selected_text else "")
+        if not actual_query:
+            return "Please type a question to get an explanation."
+            
+        # Search ChromaDB using the student's question to find the best matching textbook passages
+        similar_chunks = self.chromadb_manager.search_similar_content(
+            collection_name, actual_query, n_results=2
         )
         
-        if relevant_content:
-            context = relevant_content['content']
-        else:
-            # Fallback to similarity search
-            similar_content = self.chromadb_manager.search_similar_content(
-                collection_name, selected_text, n_results=1
-            )
-            context = similar_content[0]['content'] if similar_content else selected_text
+        context_blocks = []
+        if selected_text and selected_text.strip() and selected_text.strip() != actual_query:
+            context_blocks.append(f"Current Lesson Material:\n{selected_text.strip()}")
+            
+        if similar_chunks:
+            retrieved = "\n\n".join([c['content'] for c in similar_chunks])
+            context_blocks.append(f"Relevant Textbook Passages:\n{retrieved}")
+        elif selected_text:
+            context_blocks.append(f"Textbook Content:\n{selected_text.strip()}")
+            
+        context = "\n\n---\n\n".join(context_blocks) if context_blocks else "Class 12th Textbook"
         
         # Get answer from Gemini
-        answer = self.gemini_client.answer_student_query(context, query)
-        
+        answer = self.gemini_client.answer_student_query(context, actual_query)
         return answer
     
     def simplify_content_for_retry(self, subject: str, part_number: int) -> str:

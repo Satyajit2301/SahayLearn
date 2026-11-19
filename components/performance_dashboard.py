@@ -230,10 +230,11 @@ class PerformanceDashboard:
             st.subheader("Recent Questions")
             
             for i, chat in enumerate(st.session_state.chat_history[-3:]):
-                with st.expander(f"Question {len(st.session_state.chat_history) - 2 + i}: {chat['question'][:30]}..."):
-                    st.text(f"Selected Text: {chat['selected_text'][:50]}...")
-                    st.text(f"Question: {chat['question']}")
-                    st.text(f"Answer: {chat['answer'][:100]}...")
+                with st.expander(f"Question {len(st.session_state.chat_history) - 2 + i}: {chat.get('question', '')[:30]}..."):
+                    if chat.get('selected_text'):
+                        st.text(f"Topic: {chat.get('selected_text', '')[:50]}...")
+                    st.text(f"Question: {chat.get('question', '')}")
+                    st.text(f"Answer: {chat.get('answer', '')[:100]}...")
         
         # Study recommendations
         st.subheader("📋 Study Recommendations")

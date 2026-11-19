@@ -40,101 +40,106 @@ class LearningInterface:
         
         # Check if this part was failed and needs simplified version
         retry_key = f"retry_{st.session_state.current_subject.lower()}_part_{st.session_state.current_part}"
+        cache_key = f"simplified_cache_{st.session_state.current_subject.lower()}_part_{st.session_state.current_part}"
+        
         if st.session_state.get(retry_key, False):
-            st.info("📝 Here's a simplified version to help you understand better:")
-            with st.spinner("Generating simplified content..."):
-                simplified_content = self.orchestrator.simplify_content_for_retry(
-                    st.session_state.current_subject,
-                    st.session_state.current_part
-                )
+            col_simp_title, col_simp_btn = st.columns([3, 1])
+            with col_simp_title:
+                st.info("📝 **Simplified Version** (tailored to help you understand better):")
+            with col_simp_btn:
+                if st.button("📖 View Original Text", key="view_orig_btn"):
+                    st.session_state[retry_key] = False
+                    st.rerun()
+            
+            # Use cached version if already generated, otherwise generate and cache
+            if cache_key in st.session_state:
+                simplified_content = st.session_state[cache_key]
+            else:
+                with st.spinner("Generating simplified concept summary..."):
+                    simplified_content = self.orchestrator.simplify_content_for_retry(
+                        st.session_state.current_subject,
+                        st.session_state.current_part
+                    )
+                    st.session_state[cache_key] = simplified_content
+            
             st.markdown(simplified_content)
-            # Reset retry flag
-            st.session_state[retry_key] = False
         else:
-            # Display original content
+            col_orig_title, col_orig_btn = st.columns([3, 1])
+            with col_orig_title:
+                st.markdown(f"### Lesson Content (Part {st.session_state.current_part + 1})")
+            with col_orig_btn:
+                if cache_key in st.session_state:
+                    if st.button("📝 View Simplified Version", key="view_simp_btn"):
+                        st.session_state[retry_key] = True
+                        st.rerun()
             st.markdown(content_data['content'])
         
-        # Text selection for chat
+        # 💬 AI Tutor Chat Section
         st.markdown("---")
-        st.subheader("💬 Ask Questions About This Content")
+        col_chat_title, col_chat_clear = st.columns([3, 1])
+        with col_chat_title:
+            st.subheader("💬 Ask Your AI Tutor")
+        with col_chat_clear:
+            if st.session_state.chat_history:
+                if st.button("🗑️ Clear Chat", key="clear_chat_btn"):
+                    st.session_state.chat_history = []
+                    st.rerun()
         
-        # Text selection input
-        selected_text = st.text_area(
-            "Select and paste text to ask questions about:",
-            height=100,
-            key="selected_text_input",
-            placeholder="Copy and paste any part of the text above that you want to ask about..."
-        )
+        # Quick suggested questions
+        st.markdown("**💡 Quick Questions:**")
+        suggested_prompts = self.orchestrator.get_suggested_prompts()
+        cols = st.columns(len(suggested_prompts))
+        quick_question_clicked = None
+        for i, prompt in enumerate(suggested_prompts):
+            with cols[i]:
+                if st.button(prompt, key=f"quick_prompt_{i}", use_container_width=True):
+                    quick_question_clicked = prompt
         
-        # Check for text input and trigger rerun if needed
-        if selected_text and selected_text.strip():
-            # Store selected text in session state for consistency
-            if st.session_state.get("last_selected_text") != selected_text:
-                st.session_state["last_selected_text"] = selected_text
-                st.rerun()
+        # Display Chat History
+        chat_container = st.container()
+        with chat_container:
+            if not st.session_state.chat_history and not quick_question_clicked:
+                st.info("👋 Have a doubt? Type your question in the chat box below and press **Enter** to ask the AI Tutor!")
+            else:
+                for chat in st.session_state.chat_history:
+                    with st.chat_message("user"):
+                        st.markdown(chat['question'])
+                    with st.chat_message("assistant", avatar="🎓"):
+                        st.markdown(chat['answer'])
         
-        # Use session state text to ensure consistency
-        display_text = st.session_state.get("last_selected_text", selected_text)
+        # Unified Chat Input (Pressing Enter sends the question immediately)
+        user_input = st.chat_input("Ask a question about this chapter... (Type and press Enter)")
         
-        if display_text and display_text.strip():
-            # Suggested prompts
-            st.subheader("Suggested Questions:")
-            suggested_prompts = self.orchestrator.get_suggested_prompts()
-            
-            cols = st.columns(2)
-            for i, prompt in enumerate(suggested_prompts):
-                with cols[i % 2]:
-                    if st.button(prompt, key=f"prompt_{i}"):
-                        with st.spinner("Getting answer..."):
-                            answer = self.orchestrator.handle_student_query(
-                                st.session_state.current_subject,
-                                display_text,
-                                prompt
-                            )
-                        
-                        # Add to chat history
-                        chat_entry = {
-                            'selected_text': display_text,
-                            'question': prompt,
-                            'answer': answer
-                        }
-                        st.session_state.chat_history.append(chat_entry)
-                        st.rerun()
-            
-            # Custom question input
-            custom_question = st.text_input(
-                "Or ask your own question:",
-                placeholder="Type your question here..."
-            )
-            
-            if custom_question and st.button("Ask Question"):
-                with st.spinner("Getting answer..."):
-                    answer = self.orchestrator.handle_student_query(
-                        st.session_state.current_subject,
-                        display_text,
-                        custom_question
-                    )
+        # Handle new question submission from either chat_input or a quick question button
+        question_to_process = user_input or quick_question_clicked
+        if question_to_process:
+            with chat_container:
+                with st.chat_message("user"):
+                    st.markdown(question_to_process)
                 
-                # Add to chat history
-                chat_entry = {
-                    'selected_text': display_text,
-                    'question': custom_question,
-                    'answer': answer
-                }
-                st.session_state.chat_history.append(chat_entry)
-                st.rerun()
-        
-        # Display recent chat history
-        if st.session_state.chat_history:
-            st.markdown("---")
-            st.subheader("Recent Q&A")
+                with st.chat_message("assistant", avatar="🎓"):
+                    with st.spinner("AI Tutor is answering..."):
+                        answer = self.orchestrator.handle_student_query(
+                            st.session_state.current_subject,
+                            content_data['content'],
+                            question_to_process
+                        )
+                        st.markdown(answer)
             
-            # Show last 3 interactions
-            for i, chat in enumerate(st.session_state.chat_history[-3:]):
-                with st.expander(f"Q: {chat['question'][:50]}..."):
-                    st.markdown(f"**Selected Text:** {chat['selected_text'][:100]}...")
-                    st.markdown(f"**Question:** {chat['question']}")
-                    st.markdown(f"**Answer:** {chat['answer']}")
+            # Save to chat history
+            st.session_state.chat_history.append({
+                'selected_text': f"{st.session_state.current_subject} - Part {st.session_state.current_part + 1}",
+                'question': question_to_process,
+                'answer': answer
+            })
+            
+            # Check badge for questions asked
+            self.badge_system.check_and_award_badges(
+                st.session_state.current_subject,
+                st.session_state.current_part,
+                0
+            )
+            st.rerun()
         
         # Navigation and completion buttons
         st.markdown("---")
@@ -149,18 +154,16 @@ class LearningInterface:
         with col2:
             completion_key = f"{st.session_state.current_subject.lower()}_chapter1_part_{st.session_state.current_part}"
             if completion_key not in st.session_state.completed_parts:
-                if st.button("✅ Mark as Complete & Take Assessment", type="primary"):
-                    # Switch to assessment page
+                if st.button("✅ Mark as Complete & Take Assessment", type="primary", use_container_width=True):
                     st.session_state.assessment_part = st.session_state.current_part
-                    st.info("Please go to the Assessment page to take the quiz for this part.")
+                    st.info("Please navigate to the 📊 Assessment page from the sidebar to take the quiz.")
             else:
                 st.success("This part is completed!")
-                if st.button("🔄 Retake Assessment"):
+                if st.button("🔄 Retake Assessment", use_container_width=True):
                     st.session_state.assessment_part = st.session_state.current_part
-                    st.info("Please go to the Assessment page to retake the quiz.")
+                    st.info("Please navigate to the 📊 Assessment page to retake the quiz.")
         
         with col3:
-            # Check if current part is completed before allowing next
             completion_key = f"{st.session_state.current_subject.lower()}_chapter1_part_{st.session_state.current_part}"
             if completion_key in st.session_state.completed_parts:
                 if st.button("Next Part ➡️"):
